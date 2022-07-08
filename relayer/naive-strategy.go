@@ -3,12 +3,11 @@ package relayer
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/avast/retry-go/v4"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
-	icq "github.com/simplyvc/interchainqueries/x/icq/types"
+	icq "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -146,11 +145,9 @@ func UnrelayedSequences(ctx context.Context, src, dst *Chain, srcChannel *chanty
 	return rs, nil
 }
 
-func UnrelayedInterchainqueries(ctx context.Context, src, dst *Chain, buffer uint64) ([]icq.PendingICQRequest, error) {
+func UnrelayedInterchainqueries(ctx context.Context, src, dst *Chain, buffer uint64) ([]icq.Query, error) {
 	var (
-		uniqueInterchainQueries  = map[uint64]icq.PendingICQRequest{}
-		pendingInterchainQueries = []icq.PendingICQRequest{}
-		allInterchainQueries     = []icq.PendingICQRequest{}
+		allInterchainQueries = []icq.Query{}
 	)
 
 	srch, _, err := QueryLatestHeights(ctx, src, dst)
@@ -163,7 +160,7 @@ func UnrelayedInterchainqueries(ctx context.Context, src, dst *Chain, buffer uin
 	eg.Go(func() error {
 		return retry.Do(func() error {
 			var err error
-			allInterchainQueries, err = src.ChainProvider.QueryInterchainqueries(egCtx, uint64(srch))
+			allInterchainQueries, err = src.ChainProvider.QueryInterchainqueries(egCtx, uint64(srch), src.PathEnd.ConnectionID)
 			return err
 		}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 			src.log.Debug(
@@ -181,27 +178,7 @@ func UnrelayedInterchainqueries(ctx context.Context, src, dst *Chain, buffer uin
 		return nil, err
 	}
 
-	// Get the current Height of the SRC Blockchain
-	currHeight, err := src.ChainProvider.QueryLatestHeight(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// For all interchainquery ids in complete ids, store the pending interchainquery in list to submit later
-	for _, query := range allInterchainQueries {
-		if query.TimeoutHeight >= uint64(currHeight)+buffer {
-			if val, ok := uniqueInterchainQueries[query.PeriodicId]; ok {
-				// Choose one that is about to be timedout as it needs to be processed first
-				if val.TimeoutHeight <= query.TimeoutHeight {
-					query = val
-				}
-			}
-			uniqueInterchainQueries[query.PeriodicId] = query
-			pendingInterchainQueries = append(pendingInterchainQueries, query)
-		}
-	}
-
-	return pendingInterchainQueries, nil
+	return allInterchainQueries, nil
 }
 
 // UnrelayedAcknowledgements returns the unrelayed sequence numbers between two chains
@@ -229,8 +206,8 @@ func UnrelayedAcknowledgements(ctx context.Context, src, dst *Chain, srcChannel 
 			switch {
 			case err != nil:
 				return err
-			case res == nil:
-				return src.errQueryUnrelayedPacketAcks()
+			// case res == nil:
+			// 	return src.errQueryUnrelayedPacketAcks()
 			default:
 				return nil
 			}
@@ -255,8 +232,8 @@ func UnrelayedAcknowledgements(ctx context.Context, src, dst *Chain, srcChannel 
 			switch {
 			case err != nil:
 				return err
-			case res == nil:
-				return dst.errQueryUnrelayedPacketAcks()
+			// case res == nil:
+			// 	return dst.errQueryUnrelayedPacketAcks()
 			default:
 				return nil
 			}
@@ -499,8 +476,9 @@ func RelayPackets(ctx context.Context, src, dst *Chain, sp *RelaySequences, maxT
 }
 
 // RelayInterchainqueries creates transactions to relay packets from src to dst and from dst to src
-func RelayInterchainqueries(ctx context.Context, src, dst *Chain, iqs []icq.PendingICQRequest, maxTxSize, maxMsgLength uint64) error {
+func RelayInterchainqueries(ctx context.Context, src, dst *Chain, iqs []icq.Query, maxTxSize, maxMsgLength uint64) error {
 	// set the maximum relay transaction constraints
+	var heights []uint64
 	msgs := &RelayInterchainqueryMsgs{
 		Msgs:         []provider.RelayerMessage{},
 		MaxTxSize:    maxTxSize,
@@ -518,7 +496,8 @@ func RelayInterchainqueries(ctx context.Context, src, dst *Chain, iqs []icq.Pend
 		eg, egCtx := errgroup.WithContext(ctx)
 		// add messages for interchainqueries on src
 		eg.Go(func() error {
-			return AddMessagesForInterchainqueries(egCtx, iqs, src, dst, srch, dsth, &msgs.Msgs)
+			heights, err = AddMessagesForInterchainqueries(egCtx, iqs, src, dst, srch, dsth, &msgs.Msgs)
+			return err
 		})
 
 		if err = eg.Wait(); err != nil {
@@ -536,9 +515,24 @@ func RelayInterchainqueries(ctx context.Context, src, dst *Chain, iqs []icq.Pend
 
 		// Prepend non-empty msg lists with UpdateClient
 		eg, egCtx = errgroup.WithContext(ctx) // New errgroup because previous egCtx is canceled at this point.
-		eg.Go(func() error {
-			return PrependUpdateClientMsg(egCtx, &msgs.Msgs, dst, src, srch)
-		})
+
+		uniqueHeights := func(hs []uint64) []uint64 {
+			var out []uint64
+			var test map[uint64]bool = make(map[uint64]bool)
+			for _, i := range hs {
+				if _, ok := test[i]; !ok {
+					test[i] = true
+					out = append(out, i)
+				}
+			}
+			return out
+		}(heights)
+
+		for _, h := range uniqueHeights {
+			eg.Go(func() error {
+				return PrependUpdateClientMsg(egCtx, &msgs.Msgs, dst, src, int64(h))
+			})
+		}
 		if err = eg.Wait(); err != nil {
 			return err
 		}
@@ -600,21 +594,24 @@ func AddMessagesForSequences(ctx context.Context, sequences []uint64, src, dst *
 	return nil
 }
 
-func AddMessagesForInterchainqueries(ctx context.Context, queries []icq.PendingICQRequest, src, dst *Chain, srch, dsth int64, msgs *[]provider.RelayerMessage) error {
+func AddMessagesForInterchainqueries(ctx context.Context, queries []icq.Query, src, dst *Chain, srch, dsth int64, msgs *[]provider.RelayerMessage) ([]uint64, error) {
+	var heights []uint64
 	for _, query := range queries {
 		var (
 			msg provider.RelayerMessage
 			err error
+
+			height uint64
 		)
 
 		if err = retry.Do(func() error {
-			msg, err = src.ChainProvider.RelayPacketFromInterchainquery(ctx, src.ChainProvider, dst.ChainProvider,
-				uint64(srch), uint64(dsth), query, dst.ClientID(), src.ClientID())
+			msg, height, err = src.ChainProvider.RelayPacketFromInterchainquery(ctx, src.ChainProvider, dst.ChainProvider,
+				query, dst.ClientID(), src.ClientID())
 			return err
 		}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 			src.log.Debug(
 				"Failed to relay interchainquery",
-				zap.String("interchainquery_id", strconv.FormatUint(query.Id, 10)),
+				zap.String("interchainquery_id", query.Id),
 				zap.String("querying_chain_id", src.ChainID()),
 				zap.String("queried_chain_id", dst.ChainID()),
 				zap.Uint("attempt", n+1),
@@ -624,17 +621,19 @@ func AddMessagesForInterchainqueries(ctx context.Context, queries []icq.PendingI
 
 			srch, dsth, _ = QueryLatestHeights(ctx, src, dst)
 		})); err != nil {
-			return err
+			return []uint64{}, err
 		}
 
 		// Depending on the type of message to be relayed, we need to send to different chains
 		if msg != nil {
+			heights = append(heights, height)
 			*msgs = append(*msgs, msg)
 		}
 
 	}
 
-	return nil
+	print(heights)
+	return heights, nil
 }
 
 // PrependUpdateClientMsg adds an UpdateClient msg to the front of non-empty msg lists

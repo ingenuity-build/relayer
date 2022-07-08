@@ -172,7 +172,7 @@ func relayUnrelayedPacketsAndAcks(ctx context.Context, src, dst *Chain, maxTxSiz
 		case <-ctx.Done():
 			return
 		default:
-			if interchainquery.Query {
+			if interchainquery.Query && interchainquery.SrcChannel == srcChannel.channel.ChannelId {
 				if err := relayInterchainqueries(ctx, src, dst, maxTxSize, maxMsgLength, uint64(interchainquery.Buffer)); err != nil {
 					return
 				}
@@ -315,7 +315,7 @@ func relayUnrelayedPackets(ctx context.Context, src, dst *Chain, maxTxSize, maxM
 		}
 
 	} else {
-		src.log.Info(
+		src.log.Debug(
 			"No packets in queue",
 			zap.String("src_chain_id", src.ChainID()),
 			zap.String("src_channel_id", srcChannel.ChannelId),
@@ -395,7 +395,7 @@ func relayUnrelayedAcks(ctx context.Context, src, dst *Chain, maxTxSize, maxMsgL
 		}
 
 	} else {
-		src.log.Info(
+		src.log.Debug(
 			"No acknowledgements in queue",
 			zap.String("src_chain_id", src.ChainID()),
 			zap.String("src_channel_id", srcChannel.ChannelId),

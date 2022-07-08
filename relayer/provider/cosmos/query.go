@@ -23,8 +23,8 @@ import (
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
 	ibctmtypes "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
+	icq "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"github.com/pkg/errors"
-	icq "github.com/simplyvc/interchainqueries/x/icq/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/light"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
@@ -203,11 +203,17 @@ func (cc *CosmosProvider) QueryStateABCI(ctx context.Context, height int64, path
 		height--
 	}
 
+	prove := false
+	pathParts := strings.Split(string(path), "/")
+	if pathParts[len(pathParts)-1] == "key" { // fetch proof if the query is 'key'
+		prove = true
+	}
+
 	req := abci.RequestQuery{
-		Path:   path,
+		Path:   "/" + path,
 		Height: height,
 		Data:   key,
-		Prove:  true,
+		Prove:  prove,
 	}
 
 	res, err := cc.QueryABCI(ctx, req)
@@ -220,15 +226,16 @@ func (cc *CosmosProvider) QueryStateABCI(ctx context.Context, height int64, path
 }
 
 // QueryInterchainqueries returns a list of all interchainquery requests
-func (cc *CosmosProvider) QueryInterchainqueries(ctx context.Context, height uint64) ([]icq.PendingICQRequest, error) {
-	qc := icq.NewQueryClient(cc)
-	res, err := qc.PendingICQRequestAll(ctx, &icq.QueryAllPendingICQRequest{
-		Pagination: DefaultPageRequest(),
+func (cc *CosmosProvider) QueryInterchainqueries(ctx context.Context, height uint64, connectionId string) ([]icq.Query, error) {
+	qc := icq.NewQuerySrvrClient(cc)
+	res, err := qc.Queries(ctx, &icq.QueryRequestsRequest{
+		Pagination:   DefaultPageRequest(),
+		ConnectionId: connectionId,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return res.PendingICQRequest, nil
+	return res.Queries, nil
 }
 
 // QueryClientState retrieves the latest consensus state for a client in state at a given height

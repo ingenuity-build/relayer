@@ -10,7 +10,7 @@ import (
 	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
-	icq "github.com/simplyvc/interchainqueries/x/icq/types"
+	icq "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"go.uber.org/zap"
@@ -81,10 +81,10 @@ type ChainProvider interface {
 	MsgTransfer(amount sdk.Coin, dstChainId, dstAddr, srcPortId, srcChanId string, timeoutHeight, timeoutTimestamp uint64) (RelayerMessage, error)
 	MsgRelayTimeout(ctx context.Context, dst ChainProvider, dsth int64, packet RelayPacket, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
 	MsgRelayRecvPacket(ctx context.Context, dst ChainProvider, dsth int64, packet RelayPacket, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
-	MsgRelayInterchainqueryResult(ctx context.Context, src, dst ChainProvider, srch, dsth int64, query icq.PendingICQRequest) (RelayerMessage, error)
+	MsgRelayInterchainqueryResult(ctx context.Context, src, dst ChainProvider, query icq.Query) (RelayerMessage, uint64, error)
 	MsgUpgradeClient(srcClientId string, consRes *clienttypes.QueryConsensusStateResponse, clientRes *clienttypes.QueryClientStateResponse) (RelayerMessage, error)
 	RelayPacketFromSequence(ctx context.Context, src, dst ChainProvider, srch, dsth, seq uint64, dstChanId, dstPortId, srcChanId, srcPortId, srcClientId string) (RelayerMessage, RelayerMessage, error)
-	RelayPacketFromInterchainquery(ctx context.Context, src, dst ChainProvider, srch, dsth uint64, iq icq.PendingICQRequest, dstClientId, srcClientId string) (RelayerMessage, error)
+	RelayPacketFromInterchainquery(ctx context.Context, src, dst ChainProvider, iq icq.Query, dstClientId, srcClientId string) (RelayerMessage, uint64, error)
 	AcknowledgementFromSequence(ctx context.Context, dst ChainProvider, dsth, seq uint64, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
 
 	SendMessage(ctx context.Context, msg RelayerMessage) (*RelayerTxResponse, bool, error)
@@ -158,7 +158,7 @@ type QueryProvider interface {
 	QueryDenomTraces(ctx context.Context, offset, limit uint64, height int64) ([]transfertypes.DenomTrace, error)
 
 	// Interchain Querying
-	QueryInterchainqueries(ctx context.Context, height uint64) ([]icq.PendingICQRequest, error)
+	QueryInterchainqueries(ctx context.Context, height uint64, connectionId string) ([]icq.Query, error)
 }
 
 type RelayPacket interface {

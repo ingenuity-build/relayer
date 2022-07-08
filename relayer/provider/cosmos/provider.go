@@ -27,9 +27,9 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
 	"github.com/gogo/protobuf/proto"
+	icqModule "github.com/ingenuity-build/quicksilver/x/interchainquery"
+	icq "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"github.com/pkg/errors"
-	icqModule "github.com/simplyvc/interchainqueries/x/icq"
-	icq "github.com/simplyvc/interchainqueries/x/icq/types"
 	lens "github.com/strangelove-ventures/lens/client"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -992,48 +992,49 @@ func (cc *CosmosProvider) RelayPacketFromSequence(ctx context.Context, src, dst 
 
 // MsgRelayInterchainqueryResult constructs the MsgRelayInterchainqueryResult which is to be sent to the querying chain.
 // The counterparty represents the queried chain being queried.
-func (cc *CosmosProvider) MsgRelayInterchainqueryResult(ctx context.Context, src, dst provider.ChainProvider, srch, dsth int64, query icq.PendingICQRequest) (provider.RelayerMessage, error) {
+func (cc *CosmosProvider) MsgRelayInterchainqueryResult(ctx context.Context, src, dst provider.ChainProvider, query icq.Query) (provider.RelayerMessage, uint64, error) {
 	var (
 		acc string
 		err error
+		h   int64
 	)
 	if acc, err = cc.Address(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	res, height, err := dst.QueryStateABCI(ctx, dsth, query.Path, query.QueryParameters)
+
+	if h, err = dst.QueryLatestHeight(ctx); err != nil {
+		return nil, 0, err
+	}
+
+	res, height, err := dst.QueryStateABCI(ctx, h, query.QueryType, query.Request)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	switch {
 	case err != nil:
-		return nil, err
+		return nil, 0, err
 	default:
-		msg := &icq.MsgSubmitICQResult{
+		msg := &icq.MsgSubmitQueryResponse{
 			FromAddress: acc,
+			ChainId:     dst.ChainId(),
 			QueryId:     query.Id,
 			Result:      res.Value,
-			Height:      &height,
-			Proof:       res.ProofOps,
-			PeriodicId:  query.PeriodicId,
+			Height:      int64(height.RevisionHeight),
+			ProofOps:    res.ProofOps,
 		}
-		return NewCosmosMessage(msg), nil
+		return NewCosmosMessage(msg), height.RevisionHeight, nil
 	}
 }
 
 // RelayPacketFromInterchainquery relays a query on src and returns msgs, and/or error
-func (cc *CosmosProvider) RelayPacketFromInterchainquery(ctx context.Context, src, dst provider.ChainProvider, srch, dsth uint64, iq icq.PendingICQRequest, dstClientId, srcClientId string) (provider.RelayerMessage, error) {
+func (cc *CosmosProvider) RelayPacketFromInterchainquery(ctx context.Context, src, dst provider.ChainProvider, iq icq.Query, dstClientId, srcClientId string) (provider.RelayerMessage, uint64, error) {
 
-	if iq.ClientId != srcClientId {
-		return nil, fmt.Errorf("wrong client id for interchainquery %d: expected(%s) got(%s)", iq.Id, iq.ClientId, srcClientId)
-	}
+	// if iq.ClientId != srcClientId {
+	// 	return nil, fmt.Errorf("wrong client id for interchainquery %d: expected(%s) got(%s)", iq.Id, iq.ClientId, srcClientId)
+	// }
 
-	result, err := src.MsgRelayInterchainqueryResult(ctx, src, dst, int64(srch), int64(dsth), iq)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return src.MsgRelayInterchainqueryResult(ctx, src, dst, iq)
 
 }
 

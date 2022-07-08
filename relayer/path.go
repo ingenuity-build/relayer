@@ -96,8 +96,9 @@ type Path struct {
 }
 
 type Interchainquery struct {
-	Query  bool `yaml:"query" json:"query"`
-	Buffer int  `yaml:"buffer" json:"buffer"`
+	Query      bool   `yaml:"query" json:"query"`
+	Buffer     int    `yaml:"buffer" json:"buffer"`
+	SrcChannel string `yaml:"src-channel" json:"src-channel"`
 }
 
 // ChannelFilter provides the means for either creating an allowlist or a denylist of channels on the src chain
