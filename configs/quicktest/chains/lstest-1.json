@@ -1,0 +1,6 @@
+
+
+{
+    "type": "cosmos",
+    "value": {"key":"testkey","chain-id":"lstest-1","rpc-addr":"http://testzone1:26657","account-prefix":"cosmos","gas-adjustment":1.5,"gas-prices":"0.0uqck","timeout":"20s","output-format":"json","sign-mode": "direct", "debug": true, "keyring-backend": "test"}
+}

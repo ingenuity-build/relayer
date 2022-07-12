@@ -1,0 +1,6 @@
+
+
+{
+    "type": "cosmos",
+    "value": {"key":"testkey","chain-id":"qstest-1","rpc-addr":"http://quicksilver:26657","account-prefix":"quick","gas-adjustment":1.5,"gas-prices":"0.0uqck","timeout":"20s","output-format":"json","sign-mode": "direct", "debug": true, "keyring-backend": "test"}
+}
