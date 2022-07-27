@@ -161,15 +161,6 @@ func relayerMainLoop(ctx context.Context, log *zap.Logger, src, dst *Chain, filt
 		// So we will occasionally query recent txs and check the events for `ChannelOpenInit`, at which point
 		// we will attempt to finish opening the channel.
 
-		// TODO when we have completed the Chain/Path processor refactor we will be listening for
-		// new channels that are being opened/created so it's possible we have no open channels to relay on
-		// at startup but after some time has passed a channel needs opened and relayed on. At this point we
-		// could choose to loop here until some action is needed.
-		if len(srcOpenChannels) == 0 {
-			errCh <- fmt.Errorf("there are no open channels to relay on")
-			return
-		}
-
 		// Spin up a goroutine to relay packets & acks for each channel that isn't already being relayed against.
 		for _, channel := range srcOpenChannels {
 			if !channel.active {
