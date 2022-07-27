@@ -3,12 +3,12 @@ package relayer
 import (
 	"fmt"
 
-	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	"github.com/cosmos/relayer/v2/relayer/provider/cosmos"
 	"go.uber.org/zap"
 
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 )
 
 func logFailedTx(log *zap.Logger, chainID string, res *provider.RelayerTxResponse, err error, msgs []provider.RelayerMessage) {
@@ -65,6 +65,15 @@ func (c *Chain) logPacketsRelayed(dst *Chain, num int, srcChannel *chantypes.Ide
 		zap.String("from_port_id", srcChannel.Counterparty.PortId),
 		zap.String("to_chain_id", c.ChainID()),
 		zap.String("to_port_id", srcChannel.PortId),
+	)
+}
+
+func (c *Chain) logInterqueryRelayed(dst *Chain, num int) {
+	c.log.Info(
+		"Relayed interqueries",
+		zap.Int("count", num),
+		zap.String("querying_chain_id", dst.ChainID()),
+		zap.String("queried_chain_id", c.ChainID()),
 	)
 }
 

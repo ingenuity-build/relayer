@@ -6,12 +6,14 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
+	interquerytypes "github.com/defund-labs/defund/x/query/types"
 	"github.com/gogo/protobuf/proto"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -71,7 +73,6 @@ type PacketInfo struct {
 	SourceChannel    string
 	DestPort         string
 	DestChannel      string
-	ChannelOrder     string
 	Data             []byte
 	TimeoutHeight    clienttypes.Height
 	TimeoutTimestamp uint64
@@ -207,11 +208,6 @@ type ChainProvider interface {
 	// PacketReceipt queries for proof that a MsgRecvPacket has not been committed to the chain.
 	PacketReceipt(ctx context.Context, msgTransfer PacketInfo, height uint64) (PacketProof, error)
 
-	// NextSeqRecv queries for the appropriate proof required to prove the next expected packet sequence number
-	// for a given counterparty channel. This is used in ORDERED channels to ensure packets are being delivered in the
-	// exact same order as they were sent over the wire.
-	NextSeqRecv(ctx context.Context, msgTransfer PacketInfo, height uint64) (PacketProof, error)
-
 	// MsgRecvPacket takes the packet information from a MsgTransfer along with the packet commitment,
 	// and assembles a full MsgRecvPacket ready to write to the chain.
 	MsgRecvPacket(msgTransfer PacketInfo, proof PacketProof) (RelayerMessage, error)
@@ -314,8 +310,10 @@ type ChainProvider interface {
 	MsgTransfer(amount sdk.Coin, dstChainId, dstAddr, srcPortId, srcChanId string, timeoutHeight, timeoutTimestamp uint64) (RelayerMessage, error)
 	MsgRelayTimeout(ctx context.Context, dst ChainProvider, dsth int64, packet RelayPacket, dstChanId, dstPortId, srcChanId, srcPortId string, order chantypes.Order) (RelayerMessage, error)
 	MsgRelayRecvPacket(ctx context.Context, dst ChainProvider, dsth int64, packet RelayPacket, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
+	MsgRelayInterqueryResult(ctx context.Context, src, dst ChainProvider, srch, dsth int64, query interquerytypes.Interquery) (RelayerMessage, error)
 	MsgUpgradeClient(srcClientId string, consRes *clienttypes.QueryConsensusStateResponse, clientRes *clienttypes.QueryClientStateResponse) (RelayerMessage, error)
 	RelayPacketFromSequence(ctx context.Context, src, dst ChainProvider, srch, dsth, seq uint64, dstChanId, dstPortId, dstClientId, srcChanId, srcPortId, srcClientId string, order chantypes.Order) (RelayerMessage, RelayerMessage, error)
+	RelayPacketFromInterquery(ctx context.Context, src, dst ChainProvider, srch, dsth uint64, iq interquerytypes.Interquery, dstConnectionId, srcConnectionId string) (RelayerMessage, error)
 	AcknowledgementFromSequence(ctx context.Context, dst ChainProvider, dsth, seq uint64, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
 
 	SendMessage(ctx context.Context, msg RelayerMessage, memo string) (*RelayerTxResponse, bool, error)
@@ -348,6 +346,7 @@ type QueryProvider interface {
 	QueryTxs(ctx context.Context, page, limit int, events []string) ([]*RelayerTxResponse, error)
 	QueryLatestHeight(ctx context.Context) (int64, error)
 	QueryHeaderAtHeight(ctx context.Context, height int64) (ibcexported.Header, error)
+	QueryStateABCI(ctx context.Context, height int64, path string, key []byte) (*abci.ResponseQuery, clienttypes.Height, error)
 
 	// bank
 	QueryBalance(ctx context.Context, keyName string) (sdk.Coins, error)
@@ -392,6 +391,11 @@ type QueryProvider interface {
 	// ics 20 - transfer
 	QueryDenomTrace(ctx context.Context, denom string) (*transfertypes.DenomTrace, error)
 	QueryDenomTraces(ctx context.Context, offset, limit uint64, height int64) ([]transfertypes.DenomTrace, error)
+
+	// Interchain Querying
+	QueryInterqueries(ctx context.Context, height uint64) ([]interquerytypes.Interquery, error)
+	QueryInterqueryResults(ctx context.Context, height uint64) ([]interquerytypes.InterqueryResult, error)
+	QueryInterqueryTimeoutResults(ctx context.Context, height uint64) ([]interquerytypes.InterqueryTimeoutResult, error)
 }
 
 type RelayPacket interface {

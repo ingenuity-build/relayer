@@ -14,15 +14,16 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
-	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	commitmenttypes "github.com/cosmos/ibc-go/v4/modules/core/23-commitment/types"
-	host "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
-	tmclient "github.com/cosmos/ibc-go/v4/modules/light-clients/07-tendermint/types"
+	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
+	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
+	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	commitmenttypes "github.com/cosmos/ibc-go/v3/modules/core/23-commitment/types"
+	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
+	tmclient "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	interquerytypes "github.com/defund-labs/defund/x/query/types"
 	"github.com/tendermint/tendermint/light"
 	tmtypes "github.com/tendermint/tendermint/types"
 	"go.uber.org/zap"
@@ -1202,26 +1203,6 @@ func (cc *CosmosProvider) PacketReceipt(
 	}, nil
 }
 
-// NextSeqRecv queries for the appropriate Tendermint proof required to prove the next expected packet sequence number
-// for a given counterparty channel. This is used in ORDERED channels to ensure packets are being delivered in the
-// exact same order as they were sent over the wire.
-func (cc *CosmosProvider) NextSeqRecv(
-	ctx context.Context,
-	msgTransfer provider.PacketInfo,
-	height uint64,
-) (provider.PacketProof, error) {
-	key := host.NextSequenceRecvKey(msgTransfer.DestPort, msgTransfer.DestChannel)
-	_, proof, proofHeight, err := cc.QueryTendermintProof(ctx, int64(height), key)
-	if err != nil {
-		return provider.PacketProof{}, fmt.Errorf("error querying tendermint proof for next sequence receive: %w", err)
-	}
-
-	return provider.PacketProof{
-		Proof:       proof,
-		ProofHeight: proofHeight,
-	}, nil
-}
-
 func (cc *CosmosProvider) MsgTimeout(msgTransfer provider.PacketInfo, proof provider.PacketProof) (provider.RelayerMessage, error) {
 	signer, err := cc.Address()
 	if err != nil {
@@ -1562,6 +1543,35 @@ func (cc *CosmosProvider) MsgUpdateClientHeader(latestHeader provider.IBCHeader,
 	}, nil
 }
 
+// MsgRelayInterqueryResult constructs the MsgRelayInterqueryResult which is to be sent to the querying chain.
+// The counterparty represents the queried chain being queried.
+func (cc *CosmosProvider) MsgRelayInterqueryResult(ctx context.Context, src, dst provider.ChainProvider, srch, dsth int64, query interquerytypes.Interquery) (provider.RelayerMessage, error) {
+	var (
+		acc string
+		err error
+	)
+	if acc, err = cc.Address(); err != nil {
+		return nil, err
+	}
+
+	res, height, err := dst.QueryStateABCI(ctx, dsth, query.Path, query.Key)
+
+	switch {
+	case err != nil:
+		return nil, err
+	default:
+		msg := &interquerytypes.MsgCreateInterqueryResult{
+			Creator: acc,
+			Storeid: query.Storeid,
+			Data:    res.Value,
+			Height:  height.RevisionHeight,
+			Proof:   res.ProofOps,
+		}
+
+		return NewCosmosMessage(msg), nil
+	}
+}
+
 // RelayPacketFromSequence relays a packet with a given seq on src and returns recvPacket msgs, timeoutPacketmsgs and error
 func (cc *CosmosProvider) RelayPacketFromSequence(
 	ctx context.Context,
@@ -1618,6 +1628,25 @@ func (cc *CosmosProvider) RelayPacketFromSequence(
 	}
 
 	return nil, nil, fmt.Errorf("should have errored before here")
+}
+
+// RelayPacketFromInterquery relays a query on src and returns msgs, and/or error
+func (cc *CosmosProvider) RelayPacketFromInterquery(ctx context.Context, src, dst provider.ChainProvider, srch, dsth uint64, iq interquerytypes.Interquery, dstConnectionId, srcConnectionId string) (provider.RelayerMessage, error) {
+
+	if iq.ConnectionId != srcConnectionId {
+		return nil, fmt.Errorf("wrong connection id for interquery %s: expected(%s) got(%s)", iq.Storeid, iq.ConnectionId, srcConnectionId)
+	}
+
+	if iq.ConnectionId == srcConnectionId {
+		result, err := src.MsgRelayInterqueryResult(ctx, src, dst, int64(srch), int64(dsth), iq)
+		if err != nil {
+			return nil, err
+		}
+
+		return result, nil
+	}
+
+	return nil, fmt.Errorf("should have errored before here")
 }
 
 // AcknowledgementFromSequence relays an acknowledgement with a given seq on src, source is the sending chain, destination is the receiving chain

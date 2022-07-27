@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	conntypes "github.com/cosmos/ibc-go/v4/modules/core/03-connection/types"
+	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 	"github.com/cosmos/relayer/v2/relayer/processor"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	"go.uber.org/zap"
@@ -18,7 +18,6 @@ func (c *Chain) CreateOpenConnections(
 	maxRetries uint64,
 	timeout time.Duration,
 	memo string,
-	initialBlockHistory uint64,
 ) (modified bool, err error) {
 	// client identifiers must be filled in
 	if err = ValidateClientPaths(c, dst); err != nil {
@@ -66,7 +65,7 @@ func (c *Chain) CreateOpenConnections(
 			dstpathChain.chainProcessor(c.log),
 		).
 		WithPathProcessors(pp).
-		WithInitialBlockHistory(initialBlockHistory).
+		WithInitialBlockHistory(0).
 		WithMessageLifecycle(&processor.ConnectionMessageLifecycle{
 			Initial: &processor.ConnectionMessage{
 				ChainID:   c.PathEnd.ChainID,

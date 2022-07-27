@@ -7,8 +7,8 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
-	"github.com/cosmos/ibc-go/v4/modules/core/exported"
+	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	"github.com/cosmos/ibc-go/v3/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -125,7 +125,7 @@ func createClientsCmd(a *appState) *cobra.Command {
 				return err
 			}
 
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -274,7 +274,7 @@ corresponding update-client messages.`,
 		Args:    withUsage(cobra.ExactArgs(1)),
 		Example: strings.TrimSpace(fmt.Sprintf(`$ %s transact update-clients demo-path`, appName)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -300,7 +300,7 @@ func upgradeClientsCmd(a *appState) *cobra.Command {
 		Short: "upgrades IBC clients between two configured chains with a configured path and chain-id",
 		Args:  withUsage(cobra.ExactArgs(2)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -361,7 +361,7 @@ $ %s tx conn demo-path --timeout 5s`,
 				return err
 			}
 
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -391,11 +391,6 @@ $ %s tx conn demo-path --timeout 5s`,
 
 			memo := a.Config.memo(cmd)
 
-			initialBlockHistory, err := cmd.Flags().GetUint64(flagInitialBlockHistory)
-			if err != nil {
-				return err
-			}
-
 			// ensure that the clients exist
 			modified, err := c[src].CreateClients(cmd.Context(), c[dst], allowUpdateAfterExpiry, allowUpdateAfterMisbehaviour, override, memo)
 			if err != nil {
@@ -407,7 +402,7 @@ $ %s tx conn demo-path --timeout 5s`,
 				}
 			}
 
-			modified, err = c[src].CreateOpenConnections(cmd.Context(), c[dst], retries, to, memo, initialBlockHistory)
+			modified, err = c[src].CreateOpenConnections(cmd.Context(), c[dst], retries, to, memo)
 			if err != nil {
 				return err
 			}
@@ -426,7 +421,6 @@ $ %s tx conn demo-path --timeout 5s`,
 	cmd = clientParameterFlags(a.Viper, cmd)
 	cmd = overrideFlag(a.Viper, cmd)
 	cmd = memoFlag(a.Viper, cmd)
-	cmd = initBlockFlag(a.Viper, cmd)
 	return cmd
 }
 
@@ -445,7 +439,7 @@ $ %s tx chan demo-path --timeout 5s --max-retries 10`,
 			appName, appName,
 		)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -519,7 +513,7 @@ $ %s tx channel-close demo-path channel-0 transfer -o 3s`,
 			appName, appName, appName, appName,
 		)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -650,11 +644,6 @@ $ %s tx connect demo-path --src-port transfer --dst-port transfer --order unorde
 
 			memo := a.Config.memo(cmd)
 
-			initialBlockHistory, err := cmd.Flags().GetUint64(flagInitialBlockHistory)
-			if err != nil {
-				return err
-			}
-
 			// create clients if they aren't already created
 			modified, err := c[src].CreateClients(cmd.Context(), c[dst], allowUpdateAfterExpiry, allowUpdateAfterMisbehaviour, override, memo)
 			if err != nil {
@@ -667,7 +656,7 @@ $ %s tx connect demo-path --src-port transfer --dst-port transfer --order unorde
 			}
 
 			// create connection if it isn't already created
-			modified, err = c[src].CreateOpenConnections(cmd.Context(), c[dst], retries, to, memo, initialBlockHistory)
+			modified, err = c[src].CreateOpenConnections(cmd.Context(), c[dst], retries, to, memo)
 			if err != nil {
 				return fmt.Errorf("error creating connections: %w", err)
 			}
@@ -687,7 +676,6 @@ $ %s tx connect demo-path --src-port transfer --dst-port transfer --order unorde
 	cmd = channelParameterFlags(a.Viper, cmd)
 	cmd = overrideFlag(a.Viper, cmd)
 	cmd = memoFlag(a.Viper, cmd)
-	cmd = initBlockFlag(a.Viper, cmd)
 	return cmd
 }
 
@@ -743,7 +731,7 @@ $ %s tx relay-pkts demo-path channel-0`,
 			appName, appName,
 		)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
@@ -790,7 +778,7 @@ $ %s tx relay-acks demo-path channel-0 -l 3 -s 6`,
 			appName, appName,
 		)),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, src, dst, err := a.Config.ChainsFromPath(args[0])
+			c, src, dst, _, err := a.Config.ChainsFromPath(args[0])
 			if err != nil {
 				return err
 			}
