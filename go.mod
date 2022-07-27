@@ -21,11 +21,14 @@ require (
 	github.com/defund-labs/defund v0.0.2
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v43 v43.0.0
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/jsternberg/zap-logfmt v1.2.0
 	github.com/strangelove-ventures/lens v0.5.2-0.20220713232429-0763782f847c
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.21.0
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -59,6 +62,7 @@ require (
 	github.com/dvsekhvalnov/jose2go v0.0.0-20200901110807-248326c1351b // indirect
 	github.com/ethereum/go-ethereum v1.10.16 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/gin-gonic/gin v1.7.0 // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect

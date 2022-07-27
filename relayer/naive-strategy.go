@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/avast/retry-go/v4"
-	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
+	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/provider"
 	interquerytypes "github.com/defund-labs/defund/x/query/types"
 	"go.uber.org/zap"
