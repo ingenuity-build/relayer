@@ -23,7 +23,7 @@ rly chains add cosmoshub osmosis juno
 ```sh
 rly paths fetch
 ```
-OPTIONAL: Manually add channel filters. See: [configure-channel-filter]https://github.com/cosmos/relayer#configure-the-channel-filter
+OPTIONAL: Manually add channel filters. See: [configure-channel-filter]https://github.com/defund-labs/relayer#configure-the-channel-filter
 
 
 >NOTE: Naming of the auto-configured paths has changed to be less abbreviated. So for example "hubosmo" is now "cosmoshub-osmosis". These paths are bi-directional and only need to be added to the config once. So having both "hubosmo" and "osmohub" is not necessary, you just need "cosmoshub-osmosis" 

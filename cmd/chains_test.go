@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/cosmos/relayer/v2/cmd"
-	"github.com/cosmos/relayer/v2/internal/relayertest"
-	"github.com/cosmos/relayer/v2/relayer/provider/cosmos"
+	"github.com/defund-labs/relayer/v3/cmd"
+	"github.com/defund-labs/relayer/v3/internal/relayertest"
+	"github.com/defund-labs/relayer/v3/relayer/provider/cosmos"
 	"github.com/stretchr/testify/require"
 )
 

@@ -9,15 +9,15 @@ import (
 	"strings"
 
 	"github.com/cespare/permute/v2"
-	"github.com/cosmos/relayer/v2/relayer"
+	"github.com/defund-labs/relayer/v3/relayer"
 	"github.com/google/go-github/v43/github"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	REPOURL  = "https://github.com/cosmos/relayer"
-	PATHSURL = "https://github.com/cosmos/relayer/tree/main/interchain"
+	REPOURL  = "https://github.com/defund-labs/relayer"
+	PATHSURL = "https://github.com/defund-labs/relayer/tree/main/interchain"
 )
 
 func pathsCmd(a *appState) *cobra.Command {

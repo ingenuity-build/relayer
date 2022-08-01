@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/relayer/v2/relayer/processor"
+	"github.com/defund-labs/relayer/v3/relayer/processor"
 )
 
 type mockIBCHeader struct{}

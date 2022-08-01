@@ -8,7 +8,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/cosmos/relayer/v2/relayer"
+	"github.com/defund-labs/relayer/v3/relayer"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"

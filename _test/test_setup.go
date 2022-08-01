@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/relayer/v2/relayer"
+	"github.com/defund-labs/relayer/v3/relayer"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/ory/dockertest/v3"

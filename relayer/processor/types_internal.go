@@ -3,7 +3,7 @@ package processor
 import (
 	"sync"
 
-	"github.com/cosmos/relayer/v2/relayer/provider"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
 )
 
 // pathEndMessages holds the different IBC messages that

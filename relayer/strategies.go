@@ -10,10 +10,10 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	cosmosprocessor "github.com/cosmos/relayer/v2/relayer/chains/cosmos"
-	"github.com/cosmos/relayer/v2/relayer/processor"
-	"github.com/cosmos/relayer/v2/relayer/provider"
-	cosmosprovider "github.com/cosmos/relayer/v2/relayer/provider/cosmos"
+	cosmosprocessor "github.com/defund-labs/relayer/v3/relayer/chains/cosmos"
+	"github.com/defund-labs/relayer/v3/relayer/processor"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
+	cosmosprovider "github.com/defund-labs/relayer/v3/relayer/provider/cosmos"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ type ActiveChannel struct {
 
 const (
 	ProcessorEvents string = "events"
-	ProcessorLegacy        = "legacy"
+	ProcessorLegacy string = "legacy"
 )
 
 // StartRelayer starts the main relaying loop and returns a channel that will contain any control-flow related errors.

@@ -8,7 +8,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	clientypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
-	"github.com/cosmos/relayer/v2/relayer"
+	"github.com/defund-labs/relayer/v3/relayer"
 	"github.com/stretchr/testify/require"
 )
 

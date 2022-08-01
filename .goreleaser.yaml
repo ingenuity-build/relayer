@@ -8,7 +8,7 @@ builds:
   - id: "relayer"
     main: ./main.go
     ldflags:
-      - -X github.com/cosmos/relayer/v2/cmd.Version={{ .Tag }}
+      - -X github.com/defund-labs/relayer/v3/cmd.Version={{ .Tag }}
     goos:
       - darwin
       - linux

@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/cosmos/relayer/v2/internal/relaydebug"
-	"github.com/cosmos/relayer/v2/relayer"
+	"github.com/defund-labs/relayer/v3/internal/relaydebug"
+	"github.com/defund-labs/relayer/v3/relayer"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"

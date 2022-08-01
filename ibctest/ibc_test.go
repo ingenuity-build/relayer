@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	relayeribctest "github.com/cosmos/relayer/v2/ibctest"
+	relayeribctest "github.com/defund-labs/relayer/v3/ibctest"
 	"github.com/strangelove-ventures/ibctest"
 	"github.com/strangelove-ventures/ibctest/conformance"
 	"github.com/strangelove-ventures/ibctest/ibc"

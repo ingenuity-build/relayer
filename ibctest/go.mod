@@ -1,10 +1,10 @@
-module github.com/cosmos/relayer/v2/ibctest
+module github.com/defund-labs/relayer/v3/ibctest
 
 go 1.18
 
 require (
 	github.com/cosmos/cosmos-sdk v0.45.5-0.20220523154235-2921a1c3c918
-	github.com/cosmos/relayer/v2 v2.0.0
+	github.com/defund-labs/relayer/v3 v2.0.0
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/strangelove-ventures/ibctest v0.0.0-20220705151749-76314a6ae221
@@ -163,4 +163,4 @@ require (
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 // For this nested module, you always want to replace the parent reference with the current worktree.
-replace github.com/cosmos/relayer/v2 => ../
+replace github.com/defund-labs/relayer/v3 => ../

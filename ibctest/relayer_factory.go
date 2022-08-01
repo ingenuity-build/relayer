@@ -43,4 +43,4 @@ func (RelayerFactory) Labels() []label.Relayer {
 	return []label.Relayer{label.Rly}
 }
 
-func (RelayerFactory) Name() string { return "github.com/cosmos/relayer" }
+func (RelayerFactory) Name() string { return "github.com/defund-labs/relayer" }

@@ -29,9 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cosmos/relayer/v2/relayer"
-	"github.com/cosmos/relayer/v2/relayer/provider"
-	"github.com/cosmos/relayer/v2/relayer/provider/cosmos"
+	"github.com/defund-labs/relayer/v3/relayer"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
+	"github.com/defund-labs/relayer/v3/relayer/provider/cosmos"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"

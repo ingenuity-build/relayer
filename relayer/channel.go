@@ -7,8 +7,8 @@ import (
 
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	"github.com/cosmos/relayer/v2/relayer/processor"
-	"github.com/cosmos/relayer/v2/relayer/provider"
+	"github.com/defund-labs/relayer/v3/relayer/processor"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
 	"go.uber.org/zap"
 )
 

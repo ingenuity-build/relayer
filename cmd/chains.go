@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cosmos/relayer/v2/relayer"
-	"github.com/cosmos/relayer/v2/relayer/provider/cosmos"
+	"github.com/defund-labs/relayer/v3/relayer"
+	"github.com/defund-labs/relayer/v3/relayer/provider/cosmos"
 	"github.com/spf13/cobra"
 	registry "github.com/strangelove-ventures/lens/client/chain_registry"
 	"go.uber.org/zap"

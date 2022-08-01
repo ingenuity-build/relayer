@@ -8,7 +8,7 @@ import (
 	typestx "github.com/cosmos/cosmos-sdk/types/tx"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	clienttypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
-	"github.com/cosmos/relayer/v2/relayer/provider"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

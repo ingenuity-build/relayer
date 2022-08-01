@@ -3,8 +3,8 @@ package relayer
 import (
 	"fmt"
 
-	"github.com/cosmos/relayer/v2/relayer/provider"
-	"github.com/cosmos/relayer/v2/relayer/provider/cosmos"
+	"github.com/defund-labs/relayer/v3/relayer/provider"
+	"github.com/defund-labs/relayer/v3/relayer/provider/cosmos"
 	"go.uber.org/zap"
 
 	conntypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
