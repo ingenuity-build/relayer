@@ -1556,6 +1556,8 @@ func (cc *CosmosProvider) MsgRelayInterqueryResult(ctx context.Context, src, dst
 
 	res, height, err := dst.QueryStateABCI(ctx, dsth, query.Path, query.Key)
 
+	fmt.Print(height.RevisionHeight)
+
 	switch {
 	case err != nil:
 		return nil, err
@@ -1564,7 +1566,7 @@ func (cc *CosmosProvider) MsgRelayInterqueryResult(ctx context.Context, src, dst
 			Creator: acc,
 			Storeid: query.Storeid,
 			Data:    res.Value,
-			Height:  height.RevisionHeight + 2,
+			Height:  height.RevisionHeight,
 			Proof:   res.ProofOps,
 		}
 
