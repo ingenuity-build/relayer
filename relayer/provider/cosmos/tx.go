@@ -1564,7 +1564,7 @@ func (cc *CosmosProvider) MsgRelayInterqueryResult(ctx context.Context, src, dst
 			Creator: acc,
 			Storeid: query.Storeid,
 			Data:    res.Value,
-			Height:  height.RevisionHeight,
+			Height:  height.RevisionHeight + 2,
 			Proof:   res.ProofOps,
 		}
 

@@ -127,4 +127,4 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
 
-replace github.com/defund-labs/defund => github.com/schnetzlerjoe/defund v0.1.0-pre6
+replace github.com/defund-labs/defund => github.com/schnetzlerjoe/defund v0.1.0-pre8
