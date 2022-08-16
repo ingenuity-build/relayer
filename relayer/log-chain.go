@@ -111,3 +111,12 @@ func (c *Chain) LogRetryGetIBCUpdateHeader(n uint, err error) {
 		zap.Error(err),
 	)
 }
+
+func (c *Chain) logIcq(dst *Chain, num int) {
+	c.log.Info(
+		"Relayed interqueries",
+		zap.Int("count", num),
+		zap.String("querying_chain_id", dst.ChainID()),
+		zap.String("queried_chain_id", c.ChainID()),
+	)
+}

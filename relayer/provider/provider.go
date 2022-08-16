@@ -12,6 +12,8 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 	"github.com/gogo/protobuf/proto"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -188,7 +190,7 @@ type ChainProvider interface {
 	ChannelOpenConfirm(ctx context.Context, dstQueryProvider QueryProvider, dstHeader ibcexported.Header, srcClientId, srcPortId, srcChanId, dstPortId, dstChannId string) ([]RelayerMessage, error)
 	ChannelCloseInit(srcPortId, srcChanId string) (RelayerMessage, error)
 	ChannelCloseConfirm(ctx context.Context, dstQueryProvider QueryProvider, dsth int64, dstChanId, dstPortId, srcPortId, srcChanId string) (RelayerMessage, error)
-
+	QueryStateABCI(ctx context.Context, height int64, path string, key []byte) (*abci.ResponseQuery, clienttypes.Height, error)
 	// ValidatePacket makes sure packet is valid to be relayed.
 	// It should return TimeoutHeightError, TimeoutTimestampError, or TimeoutOnCloseError
 	// for packet timeout scenarios so that timeout message can be written to other chain.
@@ -318,6 +320,8 @@ type ChainProvider interface {
 	RelayPacketFromSequence(ctx context.Context, src, dst ChainProvider, srch, dsth, seq uint64, dstChanId, dstPortId, dstClientId, srcChanId, srcPortId, srcClientId string, order chantypes.Order) (RelayerMessage, RelayerMessage, error)
 	AcknowledgementFromSequence(ctx context.Context, dst ChainProvider, dsth, seq uint64, dstChanId, dstPortId, srcChanId, srcPortId string) (RelayerMessage, error)
 
+	RelayPacketFromIcq(ctx context.Context, src, dst ChainProvider, srch, dsth int64, query icqtypes.Query) (RelayerMessage, error)
+
 	SendMessage(ctx context.Context, msg RelayerMessage, memo string) (*RelayerTxResponse, bool, error)
 	SendMessages(ctx context.Context, msgs []RelayerMessage, memo string) (*RelayerTxResponse, bool, error)
 
@@ -392,6 +396,8 @@ type QueryProvider interface {
 	// ics 20 - transfer
 	QueryDenomTrace(ctx context.Context, denom string) (*transfertypes.DenomTrace, error)
 	QueryDenomTraces(ctx context.Context, offset, limit uint64, height int64) ([]transfertypes.DenomTrace, error)
+
+	QueryIcqs(ctx context.Context, height uint64) ([]icqtypes.Query, error)
 }
 
 type RelayPacket interface {

@@ -7,6 +7,7 @@ import (
 	clienttypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
 	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 )
 
 var (
@@ -228,5 +229,37 @@ func (rp relayMsgPacketAck) FetchCommitResponse(ctx context.Context, dst provide
 	default:
 		rp.dstComRes = dstCommitRes
 		return nil
+	}
+}
+
+// MsgRelayInterqueryResult constructs the MsgRelayInterqueryResult which is to be sent to the querying chain.
+// The counterparty represents the queried chain being queried.
+func (cc *CosmosProvider) RelayPacketFromIcq(ctx context.Context, src, dst provider.ChainProvider, srch, dsth int64, query icqtypes.Query) (provider.RelayerMessage, error) {
+	var (
+		acc string
+		err error
+	)
+	if acc, err = cc.Address(); err != nil {
+		return nil, err
+	}
+
+	res, height, err := dst.QueryStateABCI(ctx, dsth, "/"+query.QueryType, query.Request)
+
+	fmt.Print(height.RevisionHeight)
+
+	switch {
+	case err != nil:
+		return nil, err
+	default:
+		msg := &icqtypes.MsgSubmitQueryResponse{
+			FromAddress: acc,
+			ChainId:     query.ChainId,
+			QueryId:     query.Id,
+			Result:      res.Value,
+			Height:      int64(height.RevisionHeight),
+			ProofOps:    res.ProofOps,
+		}
+
+		return NewCosmosMessage(msg), nil
 	}
 }

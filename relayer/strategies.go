@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/relayer/v2/relayer/chains/cosmos"
 	"github.com/cosmos/relayer/v2/relayer/processor"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"go.uber.org/zap"
 )
 
@@ -179,6 +180,8 @@ func relayerMainLoop(ctx context.Context, log *zap.Logger, src, dst *Chain, filt
 			}
 		}
 
+		go relayIcqs(ctx, src, dst, maxTxSize, maxMsgLength)
+
 		// Block here until one of the running goroutines exits, while accounting for the case where
 		// the main context is cancelled while we are waiting for a read from the channel.
 		var channel *ActiveChannel
@@ -224,6 +227,88 @@ func relayerMainLoop(ctx context.Context, log *zap.Logger, src, dst *Chain, filt
 				zap.String("channel_id", channel.channel.ChannelId),
 				zap.String("channel_state", queryChannelResp.Channel.State.String()),
 			)
+		}
+	}
+}
+
+// relayUnrelayedPackets fetches unrelayed packet sequence numbers and attempts to relay the associated packets.
+// relayUnrelayedPackets returns true if packets were empty or were successfully relayed.
+// Otherwise, it logs the errors and returns false.
+func relayIcqs(ctx context.Context, src, dst *Chain, maxTxSize, maxMsgLength uint64) bool {
+	childCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
+	// Fetch any unrelayed sequences depending on the channel order
+	iqs, err := UnrelayedIcq(ctx, src, dst)
+	if err != nil {
+		src.log.Warn(
+			"Error retrieving pending interqueries",
+			zap.String("src_chain_id", src.ChainID()),
+			zap.String("dst_chain_id", dst.ChainID()),
+			zap.Error(err),
+		)
+		return false
+	}
+
+	// If there are no unrelayed packets, stop early.
+	if len(iqs) == 0 {
+		src.log.Info(
+			"No interqueries in queue",
+			zap.String("src_chain_id", src.ChainID()),
+			zap.String("dst_chain_id", dst.ChainID()),
+		)
+		return true
+	}
+
+	if len(iqs) > 0 {
+		src.log.Debug(
+			"Unrelayed interqueries",
+			zap.String("src_chain_id", src.ChainID()),
+			zap.String("dst_chain_id", dst.ChainID()),
+		)
+	}
+
+	if err := RelayIcqs(childCtx, src, dst, iqs, maxTxSize, maxMsgLength); err != nil {
+		// If there was a context cancellation or deadline while attempting to relay packets,
+		// log that and indicate failure.
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			src.log.Warn(
+				"Context finished while waiting for RelayInterqueries to complete",
+				zap.String("src_chain_id", src.ChainID()),
+				zap.String("dst_chain_id", dst.ChainID()),
+				zap.Error(childCtx.Err()),
+			)
+			return false
+		}
+
+		// Otherwise, not a context error, but an application-level error.
+		src.log.Warn(
+			"Relay interqueries error",
+			zap.String("src_chain_id", src.ChainID()),
+			zap.String("dst_chain_id", dst.ChainID()),
+			zap.Error(err),
+		)
+		// Indicate that we should attempt to keep going.
+		return true
+	}
+
+	return true
+}
+
+// relayIcqPackets will relay and submit all the pending interqueries from the src chain for the dest chain.
+func RelayIcqs(ctx context.Context, src, dst *Chain, queries []icqtypes.Query, maxTxSize, maxMsgLength uint64) error {
+
+	for {
+		if err := RelayIcq(ctx, src, dst, queries, maxTxSize, maxMsgLength); err != nil {
+			return err
+		}
+
+		// Wait for a second before continuing, but allow context cancellation to break the flow.
+		select {
+		case <-time.After(time.Second):
+			// Nothing to do.
+		case <-ctx.Done():
+			return nil
 		}
 	}
 }

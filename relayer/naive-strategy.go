@@ -9,6 +9,7 @@ import (
 	chantypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v4/modules/core/exported"
 	"github.com/cosmos/relayer/v2/relayer/provider"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -239,6 +240,143 @@ func UnrelayedSequences(ctx context.Context, src, dst *Chain, srcChannel *chanty
 	wg.Wait()
 
 	return rs
+}
+
+// UnrelayedIcq returns the outstanding ICQ queries.
+func UnrelayedIcq(ctx context.Context, src, dst *Chain) ([]icqtypes.Query, error) {
+	var (
+		pendingIcqQueries = []icqtypes.Query{}
+	)
+
+	srch, _, err := QueryLatestHeights(ctx, src, dst)
+	if err != nil {
+		return nil, err
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		// Query all queries for src chain
+		return retry.Do(func() error {
+			var err error
+			pendingIcqQueries, err = src.ChainProvider.QueryIcqs(egCtx, uint64(srch))
+			return err
+		}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+			src.log.Debug(
+				"Failed to query interchain query requests",
+				zap.String("chain_id", src.Chainid),
+				zap.Uint("attempt", n+1),
+				zap.Uint("max_attempts", RtyAttNum),
+				zap.Error(err),
+			)
+			srch, _ = src.ChainProvider.QueryLatestHeight(egCtx)
+		}))
+	})
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	return pendingIcqQueries, nil
+}
+
+// RelayIcq creates transactions to relay packets from src to dst and from dst to src
+func RelayIcq(ctx context.Context, src, dst *Chain, iqs []icqtypes.Query, maxTxSize, maxMsgLength uint64) error {
+	// set the maximum relay transaction constraints
+	msgs := &RelayInterqueryMsgs{
+		Msgs:         []provider.RelayerMessage{},
+		MaxTxSize:    maxTxSize,
+		MaxMsgLength: maxMsgLength,
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		srch, dsth, err := QueryLatestHeights(ctx, src, dst)
+		if err != nil {
+			return err
+		}
+
+		eg, egCtx := errgroup.WithContext(ctx)
+		// add messages for interqueries on src
+		eg.Go(func() error {
+			return AddMessagesForIcqs(egCtx, iqs, src, dst, srch, dsth, &msgs.Msgs)
+		})
+
+		if err = eg.Wait(); err != nil {
+			return err
+		}
+
+		if !msgs.Ready() {
+			src.log.Info(
+				"No packets to relay",
+				zap.String("src_chain_id", src.ChainID()),
+				zap.String("dst_chain_id", dst.ChainID()),
+			)
+			return nil
+		}
+
+		// Prepend non-empty msg lists with UpdateClient
+
+		eg, egCtx = errgroup.WithContext(ctx) // New errgroup because previous egCtx is canceled at this point.
+		eg.Go(func() error {
+			return src.UpdateClients(ctx, dst, "Cosmos Relayer Update Clients")
+		})
+
+		if err = eg.Wait(); err != nil {
+			return err
+		}
+
+		// send messages to their respective chains
+		if msgs.Send(ctx, src, dst); msgs.Success() {
+			if len(msgs.Msgs) > 1 {
+				dst.logIcq(src, len(msgs.Msgs)-1)
+			}
+		}
+
+		// If the context terminated while sending messages, return that error.
+		return ctx.Err()
+	}
+}
+
+// AddMessagesForInterqueries performs a query for each pending interquery from src on dst chain and then
+// constructs an interquery submit message with the query results for the src chain.
+func AddMessagesForIcqs(ctx context.Context, queries []icqtypes.Query, src, dst *Chain, srch, dsth int64, msgs *[]provider.RelayerMessage) error {
+	for _, query := range queries {
+		var (
+			msg provider.RelayerMessage
+			err error
+		)
+
+		if err = retry.Do(func() error {
+			msg, err = src.ChainProvider.RelayPacketFromIcq(ctx, src.ChainProvider, dst.ChainProvider,
+				srch, dsth, query)
+			return err
+		}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
+			src.log.Debug(
+				"Failed to relay interquery",
+				zap.String("interquery_id", query.Id),
+				zap.String("querying_chain_id", src.ChainID()),
+				zap.String("queried_chain_id", dst.ChainID()),
+				zap.Uint("attempt", n+1),
+				zap.Uint("attempt_limit", RtyAttNum),
+				zap.Error(err),
+			)
+
+			srch, dsth, _ = QueryLatestHeights(ctx, src, dst)
+		})); err != nil {
+			return err
+		}
+
+		// Depending on the type of message to be relayed, we need to send to different chains
+		if msg != nil {
+			*msgs = append(*msgs, msg)
+		}
+
+	}
+
+	return nil
 }
 
 // UnrelayedAcknowledgements returns the unrelayed sequence numbers between two chains
