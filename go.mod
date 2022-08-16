@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/avast/retry-go/v4 v4.1.0
 	github.com/cosmos/cosmos-sdk v0.45.6
-	github.com/cosmos/ibc-go/v4 v4.0.0-rc0
+	github.com/cosmos/ibc-go/v3 v3.1.1
 	github.com/gogo/protobuf v1.3.3
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v43 v43.0.0
@@ -44,7 +44,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gorocksdb v1.2.0 // indirect
 	github.com/cosmos/iavl v0.17.3 // indirect
-	github.com/cosmos/ibc-go/v3 v3.1.1 // indirect
+	github.com/cosmos/ibc-go/v4 v4.0.0-rc0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.11.1 // indirect
 	github.com/cosmos/ledger-go v0.9.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
