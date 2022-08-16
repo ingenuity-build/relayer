@@ -676,7 +676,7 @@ func RelayInterqueries(ctx context.Context, src, dst *Chain, iqs []interquerytyp
 
 		eg, egCtx = errgroup.WithContext(ctx) // New errgroup because previous egCtx is canceled at this point.
 		eg.Go(func() error {
-			return src.UpdateClients(ctx, dst, "Cosmos Relayer Update Clients")
+			return PrependUpdateClientMsg(egCtx, &msgs.Msgs, dst, src, dsth)
 		})
 
 		if err = eg.Wait(); err != nil {

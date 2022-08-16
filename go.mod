@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/avast/retry-go v2.6.0+incompatible // indirect
 	github.com/cosmos/cosmos-sdk v0.45.6
-	github.com/defund-labs/defund v0.0.2
+	github.com/defund-labs/defund v0.1.0-pre1
 	github.com/gogo/protobuf v1.3.3
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/spf13/cobra v1.5.0
@@ -126,5 +126,3 @@ require (
 replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.2-alpha.regen.4
-
-replace github.com/defund-labs/defund => github.com/schnetzlerjoe/defund v0.1.0-pre8
