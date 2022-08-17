@@ -24,8 +24,8 @@ import (
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
 	tmclient "github.com/cosmos/ibc-go/v3/modules/light-clients/07-tendermint/types"
-	interquerytypes "github.com/defund-labs/defund/x/query/types"
 	"github.com/defund-labs/relayer/v3/relayer/provider"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmtypes "github.com/tendermint/tendermint/types"
 	"golang.org/x/sync/errgroup"
@@ -912,37 +912,38 @@ func (cc *CosmosProvider) QueryConsensusStateABCI(ctx context.Context, clientID 
 }
 
 // QueryInterqueries returns a list of all interquery requests
-func (cc *CosmosProvider) QueryInterqueries(ctx context.Context, height uint64) ([]interquerytypes.Interquery, error) {
-	qc := interquerytypes.NewQueryClient(cc)
-	res, err := qc.InterqueryAll(ctx, &interquerytypes.QueryAllInterqueryRequest{
+func (cc *CosmosProvider) QueryInterqueries(ctx context.Context, height uint64) ([]icqtypes.Query, error) {
+	qc := icqtypes.NewQuerySrvrClient(cc)
+	res, err := qc.Queries(ctx, &icqtypes.QueryRequestsRequest{
 		Pagination: DefaultPageRequest(),
+		ChainId:    cc.ChainId(),
 	})
 	if err != nil {
 		return nil, err
 	}
-	return res.Interquery, nil
+	return res.Queries, nil
 }
 
 // QueryInterqueryResults returns a list of all interquery results
-func (cc *CosmosProvider) QueryInterqueryResults(ctx context.Context, height uint64) ([]interquerytypes.InterqueryResult, error) {
-	qc := interquerytypes.NewQueryClient(cc)
-	res, err := qc.InterqueryResultAll(ctx, &interquerytypes.QueryAllInterqueryResultRequest{
-		Pagination: DefaultPageRequest(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.Interqueryresult, nil
-}
+// func (cc *CosmosProvider) QueryInterqueryResults(ctx context.Context, height uint64) ([]icqtypes.QueryResult, error) {
+// 	qc := icqtypes.NewQuerySrvrClient(cc)
+// 	res, err := qc.Query(ctx, &icqtypes.QueryAllInterqueryResultRequest{
+// 		Pagination: DefaultPageRequest(),
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return res.Interqueryresult, nil
+// }
 
 // QueryInterqueryTimeoutResults returns a list of all timeout interquery results
-func (cc *CosmosProvider) QueryInterqueryTimeoutResults(ctx context.Context, height uint64) ([]interquerytypes.InterqueryTimeoutResult, error) {
-	qc := interquerytypes.NewQueryClient(cc)
-	res, err := qc.InterqueryTimeoutResultAll(ctx, &interquerytypes.QueryAllInterqueryTimeoutResultRequest{
-		Pagination: DefaultPageRequest(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.Interquerytimeoutresult, nil
-}
+// func (cc *CosmosProvider) QueryInterqueryTimeoutResults(ctx context.Context, height uint64) ([]icqtypes.QueryTimeoutResult, error) {
+// 	qc := icqtypes.NewQuerySrvrClient(cc)
+// 	res, err := qc.InterqueryTimeoutResultAll(ctx, &icqtypes.QueryAllInterqueryTimeoutResultRequest{
+// 		Pagination: DefaultPageRequest(),
+// 	})
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return res.Interquerytimeoutresult, nil
+// }

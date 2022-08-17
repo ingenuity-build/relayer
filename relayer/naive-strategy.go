@@ -8,8 +8,8 @@ import (
 	"github.com/avast/retry-go/v4"
 	chantypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	ibcexported "github.com/cosmos/ibc-go/v3/modules/core/exported"
-	interquerytypes "github.com/defund-labs/defund/x/query/types"
 	"github.com/defund-labs/relayer/v3/relayer/provider"
+	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -243,9 +243,9 @@ func UnrelayedSequences(ctx context.Context, src, dst *Chain, srcChannel *chanty
 }
 
 // UnrelayedInterqueries returns the unsubmitted/incomplete interqueries for the client-id specified in each interquery
-func UnrelayedInterqueries(ctx context.Context, src, dst *Chain) ([]interquerytypes.Interquery, error) {
+func UnrelayedInterqueries(ctx context.Context, src, dst *Chain) ([]icqtypes.Query, error) {
 	var (
-		pendingInterqueries = []interquerytypes.Interquery{}
+		pendingInterqueries = []icqtypes.Query{}
 	)
 
 	srch, _, err := QueryLatestHeights(ctx, src, dst)
@@ -636,7 +636,7 @@ func RelayPackets(ctx context.Context, log *zap.Logger, src, dst *Chain, sp Rela
 }
 
 // RelayInterqueries creates transactions to relay packets from src to dst and from dst to src
-func RelayInterqueries(ctx context.Context, src, dst *Chain, iqs []interquerytypes.Interquery, maxTxSize, maxMsgLength uint64) error {
+func RelayInterqueries(ctx context.Context, src, dst *Chain, iqs []icqtypes.Query, maxTxSize, maxMsgLength uint64) error {
 	// set the maximum relay transaction constraints
 	msgs := &RelayInterqueryMsgs{
 		Msgs:         []provider.RelayerMessage{},
@@ -746,7 +746,7 @@ func AddMessagesForSequences(
 
 // AddMessagesForInterqueries performs a query for each pending interquery from src on dst chain and then
 // constructs an interquery submit message with the query results for the src chain.
-func AddMessagesForInterqueries(ctx context.Context, queries []interquerytypes.Interquery, src, dst *Chain, srch, dsth int64, msgs *[]provider.RelayerMessage) error {
+func AddMessagesForInterqueries(ctx context.Context, queries []icqtypes.Query, src, dst *Chain, srch, dsth int64, msgs *[]provider.RelayerMessage) error {
 	for _, query := range queries {
 		var (
 			msg provider.RelayerMessage
@@ -760,7 +760,7 @@ func AddMessagesForInterqueries(ctx context.Context, queries []interquerytypes.I
 		}, retry.Context(ctx), RtyAtt, RtyDel, RtyErr, retry.OnRetry(func(n uint, err error) {
 			src.log.Debug(
 				"Failed to relay interquery",
-				zap.String("interquery_id", query.Storeid),
+				zap.String("interquery_id", query.Id),
 				zap.String("querying_chain_id", src.ChainID()),
 				zap.String("queried_chain_id", dst.ChainID()),
 				zap.Uint("attempt", n+1),
